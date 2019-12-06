@@ -57,7 +57,6 @@ endfunction()
 ####################
 # test
 ####################
-project(cfdgo_all_test CXX)
 if(ENABLE_TESTS)
 enable_testing()
 endif()		# ENABLE_TESTS
