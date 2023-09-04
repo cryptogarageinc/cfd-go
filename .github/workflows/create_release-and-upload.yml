@@ -9,37 +9,25 @@ jobs:
   create_releases:
     name: create-releases
     runs-on: ubuntu-20.04
-    outputs:
-      release_url: ${{ steps.output_url.outputs.upload_url }}
 
     steps:
       - name: checkout
         uses: actions/checkout@v3
+      - name: Get the version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+        shell: bash
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
           body: |
             Changes in this Release
             - First Change
             - Second Change
-          draft: false
           prerelease: true
         continue-on-error: true
-      - name: Get release
-        if: steps.create_release.outcome == 'failure'
-        id: get_release
-        uses: bruceadams/get-release@v1.3.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: output url
-        id: output_url
-        run: |
-          echo "upload_url=${{steps.get_release.outputs.upload_url}}${{steps.create_release.outputs.upload_url}}" >> $GITHUB_OUTPUT
 
   upload-object-windows-mingw:
     name: upload-object-win-mingw
@@ -60,10 +48,6 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: output url
-        id: get_url
-        run: echo "upload_url=${{ needs.create_releases.outputs.release_url }}" >> $GITHUB_OUTPUT
-        shell: bash
       - name: Get the version
         id: get_version
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
@@ -72,6 +56,10 @@ jobs:
         env:
           version: ${{ steps.get_version.outputs.VERSION }}
         run: echo "version=${version}"
+        shell: bash
+      - name: Get the asset name
+        id: asset_name
+        run: echo "ASSET_NAME=cfdgo-${{ steps.get_version.outputs.VERSION }}-win-${{ matrix.bin }}-x86_64.zip" >> $GITHUB_OUTPUT
         shell: bash
       - name: create folder
         run: mkdir dist
@@ -92,20 +80,15 @@ jobs:
       - name: create archive file
         run: |
           cd dist
-          Compress-Archive -Path ./* -DestinationPath ../cfd.zip
+          Compress-Archive -Path ./* -DestinationPath ../${{ steps.asset_name.outputs.ASSET_NAME }}
           cd ..
           echo "---- dump zip file ----"
           dir .
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.get_url.outputs.upload_url }}
-          asset_path: ./cfd.zip
-          asset_name: cfdgo-${{ steps.get_version.outputs.VERSION }}-win-${{ matrix.bin }}-x86_64.zip
-          asset_content_type: application/zip
+          files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-ubuntu:
     name: upload-object-ubuntu
@@ -128,6 +111,10 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      - name: Get the asset name
+        id: asset_name
+        run: echo "ASSET_NAME=cfdgo-${{ steps.get_version.outputs.VERSION }}-ubuntu${{ matrix.os_ver }}04-${{ matrix.bin }}-x86_64.zip" >> $GITHUB_OUTPUT
+        shell: bash
       - name: cmake-build
         run: |
           mkdir dist
@@ -143,25 +130,18 @@ jobs:
       - name: create archive file
         run: |
           cd dist
-          zip -r cfd.zip usr
+          zip -r ../${{ steps.asset_name.outputs.ASSET_NAME }} usr
           echo "---- dump zip file ----"
           ls -l
       - name: go test
         run: |
           sudo unzip -q ./dist/cfd.zip -d /
           LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib" go test
-      - name: output url
-        id: get_url
-        run: echo "upload_url=${{ needs.create_releases.outputs.release_url }}" >> $GITHUB_OUTPUT
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: upload-release-asset
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.get_url.outputs.upload_url }}
-          asset_path: ./dist/cfd.zip
-          asset_name: cfdgo-${{ steps.get_version.outputs.VERSION }}-ubuntu${{ matrix.os_ver }}04-${{ matrix.bin }}-x86_64.zip
-          asset_content_type: application/zip
+          files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-alpine-3-15:
     name: upload-object-alpine-3.15
@@ -174,6 +154,10 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      - name: Get the asset name
+        id: asset_name
+        run: echo "ASSET_NAME=cfdgo-${{ steps.get_version.outputs.VERSION }}-alpine-3.15-x86_64.zip" >> $GITHUB_OUTPUT
+        shell: bash
       - name: list
         run: ls -a $GITHUB_WORKSPACE
       - name: docker setup
@@ -199,20 +183,13 @@ jobs:
         uses: docker://golang:1.18-alpine3.15
         with:
           entrypoint: /github/workspace/.github/workflows/docker/alpine_test_entrypoint.sh
-      - name: output url
-        id: get_url
-        run: echo "upload_url=${{ needs.create_releases.outputs.release_url }}" >> $GITHUB_OUTPUT
+      - name: rename asset
+        run: mv /tmp/cfd/cfd.zip ${{ steps.asset_name.outputs.ASSET_NAME }}
       - name: Upload Release Asset
         id: upload-release-asset
-        #      if: success()
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.get_url.outputs.upload_url }}
-          asset_path: /tmp/cfd/cfd.zip
-          asset_name: cfdgo-${{ steps.get_version.outputs.VERSION }}-alpine-3.15-x86_64.zip
-          asset_content_type: application/zip
+          files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-alpine-3-16:
     name: upload-object-alpine-3.16
@@ -225,6 +202,10 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      - name: Get the asset name
+        id: asset_name
+        run: echo "ASSET_NAME=cfdgo-${{ steps.get_version.outputs.VERSION }}-alpine-3.16-x86_64.zip" >> $GITHUB_OUTPUT
+        shell: bash
       - name: list
         run: ls -a $GITHUB_WORKSPACE
       - name: docker setup
@@ -250,20 +231,13 @@ jobs:
         uses: docker://golang:1.18-alpine3.16
         with:
           entrypoint: /github/workspace/.github/workflows/docker/alpine_test_entrypoint.sh
-      - name: output url
-        id: get_url
-        run: echo "upload_url=${{ needs.create_releases.outputs.release_url }}" >> $GITHUB_OUTPUT
+      - name: rename asset
+        run: mv /tmp/cfd/cfd.zip ${{ steps.asset_name.outputs.ASSET_NAME }}
       - name: Upload Release Asset
         id: upload-release-asset
-        #      if: success()
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.get_url.outputs.upload_url }}
-          asset_path: /tmp/cfd/cfd.zip
-          asset_name: cfdgo-${{ steps.get_version.outputs.VERSION }}-alpine-3.16-x86_64.zip
-          asset_content_type: application/zip
+          files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-alpine-3-17:
     name: upload-object-alpine-3.17
@@ -276,6 +250,10 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      - name: Get the asset name
+        id: asset_name
+        run: echo "ASSET_NAME=cfdgo-${{ steps.get_version.outputs.VERSION }}-alpine-3.17-x86_64.zip" >> $GITHUB_OUTPUT
+        shell: bash
       - name: list
         run: ls -a $GITHUB_WORKSPACE
       - name: docker setup
@@ -301,20 +279,13 @@ jobs:
         uses: docker://golang:1.19-alpine3.17
         with:
           entrypoint: /github/workspace/.github/workflows/docker/alpine_test_entrypoint.sh
-      - name: output url
-        id: get_url
-        run: echo "upload_url=${{ needs.create_releases.outputs.release_url }}" >> $GITHUB_OUTPUT
+      - name: rename asset
+        run: mv /tmp/cfd/cfd.zip ${{ steps.asset_name.outputs.ASSET_NAME }}
       - name: Upload Release Asset
         id: upload-release-asset
-        #      if: success()
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.get_url.outputs.upload_url }}
-          asset_path: /tmp/cfd/cfd.zip
-          asset_name: cfdgo-${{ steps.get_version.outputs.VERSION }}-alpine-3.17-x86_64.zip
-          asset_content_type: application/zip
+          files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-alpine-3-18:
     name: upload-object-alpine-3.18
@@ -327,6 +298,10 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      - name: Get the asset name
+        id: asset_name
+        run: echo "ASSET_NAME=cfdgo-${{ steps.get_version.outputs.VERSION }}-alpine-3.18-x86_64.zip" >> $GITHUB_OUTPUT
+        shell: bash
       - name: list
         run: ls -a $GITHUB_WORKSPACE
       - name: docker setup
@@ -352,20 +327,13 @@ jobs:
         uses: docker://golang:1.21-alpine3.18
         with:
           entrypoint: /github/workspace/.github/workflows/docker/alpine_test_entrypoint.sh
-      - name: output url
-        id: get_url
-        run: echo "upload_url=${{ needs.create_releases.outputs.release_url }}" >> $GITHUB_OUTPUT
+      - name: rename asset
+        run: mv /tmp/cfd/cfd.zip ${{ steps.asset_name.outputs.ASSET_NAME }}
       - name: Upload Release Asset
         id: upload-release-asset
-        #      if: success()
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.get_url.outputs.upload_url }}
-          asset_path: /tmp/cfd/cfd.zip
-          asset_name: cfdgo-${{ steps.get_version.outputs.VERSION }}-alpine-3.18-x86_64.zip
-          asset_content_type: application/zip
+          files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-macos:
     name: upload-object-macos
@@ -398,6 +366,10 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      - name: Get the asset name
+        id: asset_name
+        run: echo "ASSET_NAME=cfdgo-${{ steps.get_version.outputs.VERSION }}-osx-xcode${{ matrix.xcode }}${{ matrix.suffix }}-x86_64.zip" >> $GITHUB_OUTPUT
+        shell: bash
       - name: Select Xcode version
         run: sudo xcode-select -s '/Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer'
       - name: Show Xcode version
@@ -417,18 +389,11 @@ jobs:
       - name: create archive file
         run: |
           cd dist
-          zip -r cfd.zip usr
+          zip -r ../${{ steps.asset_name.outputs.ASSET_NAME }} usr
           echo "---- dump zip file ----"
           ls -l
-      - name: output url
-        id: get_url
-        run: echo "upload_url=${{ needs.create_releases.outputs.release_url }}" >> $GITHUB_OUTPUT
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: upload-release-asset
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ steps.get_url.outputs.upload_url }}
-          asset_path: ./dist/cfd.zip
-          asset_name: cfdgo-${{ steps.get_version.outputs.VERSION }}-osx-xcode${{ matrix.xcode }}${{ matrix.suffix }}-x86_64.zip
-          asset_content_type: application/zip
+          files: ${{ steps.asset_name.outputs.ASSET_NAME }}
