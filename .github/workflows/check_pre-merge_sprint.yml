@@ -22,8 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-#        os: [macos-14, macos-14-large, macos-13, macos-12, windows-2022, windows-2019, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04]
-        os: [macos-12, windows-2022, windows-2019, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04]
+        os: [macos-15, macos-14, macos-13, windows-2022, windows-2019, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04]
         go-version: ['~1.22', '~1.23']
 
     steps:
@@ -48,8 +47,7 @@ jobs:
         run: go build
       - name: go_test-windows
         if: runner.os == 'Windows'
-        run: ./go_test.bat
-        shell: bash
+        run: .\go_test.bat
       - name: go_test-mac
         if: runner.os == 'macOS'
         run: |

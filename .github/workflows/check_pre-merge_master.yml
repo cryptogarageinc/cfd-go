@@ -23,9 +23,9 @@ jobs:
     name: cmake build
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-#        os: [macos-14, macos-14-large, macos-13, macos-12, windows-2022, windows-2019, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04]
-        os: [macos-12, windows-2022, windows-2019, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04]
+        os: [macos-15, macos-14, macos-13, windows-2022, windows-2019, ubuntu-24.04, ubuntu-22.04, ubuntu-20.04]
         go-version: ['~1.22', '~1.23']
 
     steps:

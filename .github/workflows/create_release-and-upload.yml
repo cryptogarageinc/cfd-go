@@ -8,7 +8,7 @@ on:
 jobs:
   create_releases:
     name: create-releases
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: checkout
@@ -19,7 +19,7 @@ jobs:
         shell: bash
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ steps.get_version.outputs.VERSION }}
           body: |
@@ -86,7 +86,7 @@ jobs:
           dir .
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
@@ -139,14 +139,14 @@ jobs:
           LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib" go test
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-alpine-3-17:
     name: upload-object-alpine-3.17
     needs: create_releases
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: checkout
@@ -187,14 +187,14 @@ jobs:
         run: mv /tmp/cfd/cfd.zip ${{ steps.asset_name.outputs.ASSET_NAME }}
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-alpine-3-18:
     name: upload-object-alpine-3.18
     needs: create_releases
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: checkout
@@ -235,14 +235,14 @@ jobs:
         run: mv /tmp/cfd/cfd.zip ${{ steps.asset_name.outputs.ASSET_NAME }}
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-alpine-3-19:
     name: upload-object-alpine-3.19
     needs: create_releases
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: checkout
@@ -283,14 +283,14 @@ jobs:
         run: mv /tmp/cfd/cfd.zip ${{ steps.asset_name.outputs.ASSET_NAME }}
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
   upload-object-alpine-3-20:
     name: upload-object-alpine-3.20
     needs: create_releases
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: checkout
@@ -331,7 +331,7 @@ jobs:
         run: mv /tmp/cfd/cfd.zip ${{ steps.asset_name.outputs.ASSET_NAME }}
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.asset_name.outputs.ASSET_NAME }}
 
@@ -342,28 +342,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-#        xcode: ['13.4.1', '14.2', '14.3.1', '15.2', '15.4']
-        xcode: ['13.4.1', '14.2']
+        os: ['macos-13', 'macos-14', 'macos-15']
         shared: [on, off]
         include:
-          - xcode: '13.4.1'
-            os: macos-12
+          - os: macos-13
+            xcode: '14.3.1'
             arch: 'x86_64'
-          - xcode: '14.2'
-            os: macos-12
-            arch: 'x86_64'
-#          - xcode: '14.3.1'
-#            os: macos-13
-#            arch: 'x86_64'
-#          - xcode: '15.2'
-#            os: macos-13
-#            arch: 'x86_64'
-#          - xcode: '15.4'
-#            os: macos-14-large
-#            arch: 'x86_64'
-#          - xcode: '15.4'
-#            os: macos-14
-#            arch: 'arm64'
+          - os: macos-14
+            xcode: '15.4'
+            arch: 'arm64'
+          - os: macos-15
+            xcode: '16.1'
+            arch: 'arm64'
           - shared: on
             suffix: ''
           - shared: off
@@ -403,6 +393,6 @@ jobs:
           ls -l
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.asset_name.outputs.ASSET_NAME }}
